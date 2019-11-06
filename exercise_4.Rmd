@@ -1,0 +1,129 @@
+---
+title: "Exercise 4"
+author: "Carilli"
+date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+output: 
+  html_document:
+    theme: cerulean
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, message = FALSE,
+                      options(digits = 3, scipen = 999))
+library(tidyverse)
+library(janitor)
+library(jtools)
+library(magrittr)
+library(plm)
+library(broom)
+library(kableExtra)
+library(AER)
+library(clubSandwich)
+```
+
+```{r}
+schools <- read_csv("schools_experiment_HW.csv") %>% 
+  clean_names() %>% 
+  rename(cluster_code = clustercode,
+         test_scores = testscores)
+```
+
+### (a)
+
+### (b)
+
+### (c)
+
+```{r}
+varlist <- c("age", "girl", "sheep", "duration_village", "farmer", "education_head",
+             "number_ppl_hh", "distance_nearest_school")
+lapply(varlist, function(x){
+  lm(substitute(i ~ treatment, list(i= as.name(x))), data = schools) %>% 
+    tidy()
+})
+```
+
+
+### (d)
+
+```{r}
+lapply(varlist, function(x){
+  lm(substitute(i ~ treatment, list(i= as.name(x))), data = schools) %>% 
+    coef_test(vcov = "CR1", cluster = schools$cluster_code) 
+})
+
+# schools %$% 
+#   lm(age ~ treatment) %>% 
+#   coef_test(vcov = "CR1", cluster = cluster_code)
+```
+
+### (e)
+
+```{r}
+schools %$% 
+  lm(formal_school ~ treatment) %>% 
+  summ(digits = 4)
+
+# clustered errors
+
+schools %$% 
+  lm(formal_school ~ treatment) %>% 
+  coef_test(vcov = "CR1", cluster = schools$cluster_code)
+
+```
+
+
+### (f)
+
+```{r}
+schools %$% 
+  lm(formal_school ~ treatment + age + girl + sheep + duration_village + 
+       farmer + education_head + number_ppl_hh + distance_nearest_school) %>% 
+  summ(digits = 4)
+
+# clustered errors
+
+schools %$% 
+  lm(formal_school ~ treatment + age + girl + sheep + duration_village + 
+       farmer + education_head + number_ppl_hh + distance_nearest_school) %>%
+  coef_test(vcov = "CR1", cluster = schools$cluster_code)
+
+```
+
+### (g)
+
+```{r}
+schools %$% 
+  lm(test_scores ~ treatment) %>% 
+  coef_test(vcov = "CR1", cluster = schools$cluster_code)
+```
+
+### (h)
+
+```{r}
+schools %$% 
+  lm(test_scores ~ treatment + age + girl + sheep + duration_village + 
+       farmer + education_head + number_ppl_hh + distance_nearest_school) %>%
+  coef_test(vcov = "CR1", cluster = schools$cluster_code)
+```
+
+### (i)
+
+```{r}
+sum(!is.na(schools$formal_school))
+sum(!is.na(schools$test_scores))
+
+schools %>% 
+  select(formal_school, test_scores) %>% 
+  psych::describe()
+```
+
+### (j)
+
+```{r}
+schools %$%  
+  lm(f07_test_observed ~ treatment) %>% 
+  coef_test(vcov = "CR1", cluster = schools$cluster_code)
+```
+

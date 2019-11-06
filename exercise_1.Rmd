@@ -1,0 +1,142 @@
+---
+title: "Exercise 1"
+author: "Carilli"
+date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+output: 
+  html_document:
+    theme: cerulean
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, message = FALSE,
+                      options(digits = 3, scipen = 999))
+library(tidyverse)
+library(janitor)
+library(jtools)
+library(magrittr)
+library(plm)
+library(broom)
+library(kableExtra)
+library(AER)
+```
+
+```{r}
+vote <- read_csv("GerberGreenData.csv") %>% 
+  clean_names() 
+```
+
+### (a)
+
+```{r part_a}
+vote %$% 
+  lm(voted ~ contact_observed) %>% 
+  summ(digits = 3)
+```
+
+
+### (b)
+
+```{r part_b}
+vote %$% 
+  lm(contact_observed ~ contact_assigned) %>% 
+  summ(digits = 3) 
+
+vote %$% 
+  lm(contact_observed ~ contact_assigned) %>% 
+  tidy() %>% 
+  pull(estimate) %>% 
+  sum()
+
+vote %>% 
+  group_by(contact_assigned) %>% 
+  summarize("Percent Observed" = mean(contact_observed, na.rm = TRUE)) %>% 
+  filter(contact_assigned == 1) %>% 
+  rename("Contact Assigned" = contact_assigned) %>% 
+  kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = FALSE,
+                position = "left")
+```
+
+### (c)
+
+```{r}
+vote %$% 
+  lm(voted ~ contact_assigned) %>% 
+  summ(digits = 3)
+```
+
+### (d)
+
+```{r part_d}
+vote %$% 
+  ivreg(voted ~ contact_observed | contact_assigned) %>% 
+  tidy(digits = 3) %>% 
+  kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = FALSE,
+                position = "left")
+```
+
+### (e)
+
+```{r}
+vote %$% 
+  lm(voted ~ contact_assigned) %>%
+  tidy() %>% 
+  filter(term == "contact_assigned") %>% 
+  pull(estimate) /
+
+vote %$% 
+  lm(contact_observed ~ contact_assigned) %>% 
+  tidy() %>% 
+  filter(term == "contact_assigned") %>% 
+  pull(estimate)
+
+```
+
+### (f)
+
+```{r}
+vote %>% 
+  mutate(ward_2 = ward == 2) %$% 
+  lm(ward_2 ~ contact_assigned) %>% 
+  tidy() %>% 
+  kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = FALSE,
+                position = "left")
+
+vote %>% 
+  mutate(ward_3 = ward == 3) %$% 
+  lm(ward_3 ~ contact_assigned) %>% 
+  tidy() %>% 
+  kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = FALSE,
+                position = "left")
+
+vote %$% 
+  lm(people_hh ~ contact_assigned) %>% 
+  tidy() %>% kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = FALSE,
+                position = "left")
+```
+
+### (g)
+
+```{r}
+vote %>% 
+  mutate(ward_2 = ward == 2,
+         ward_3 = ward == 3) %$% 
+  ivreg(voted ~ contact_observed + people_hh + ward_2 + ward_3 | 
+          contact_assigned + people_hh + ward_2 + ward_3) %>% 
+  tidy() %>% 
+  kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = FALSE,
+                position = "left")
+```
+

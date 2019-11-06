@@ -1,0 +1,75 @@
+---
+title: "Exercise 3"
+author: "Carilli"
+date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+output: 
+  html_document:
+    theme: cerulean
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, message = FALSE,
+                      options(digits = 3, scipen = 999))
+library(tidyverse)
+library(janitor)
+library(jtools)
+library(magrittr)
+library(plm)
+library(broom)
+library(kableExtra)
+library(AER)
+```
+
+```{r}
+resume <- read_csv("resume_HW.csv") %>% 
+  clean_names() %>% 
+  rename(years_exp = yearsexp,
+         computer_skills = computerskills)
+```
+
+### (a)
+
+### (b)
+
+```{r}
+varlist <- c("education", "years_exp", "honors", "volunteer", "computer_skills", "female")
+
+lapply(varlist, function(x){
+  lm(substitute(i ~ afn_american, list(i= as.name(x))), data = resume) %>% 
+    tidy()
+})
+```
+
+### (c)
+
+### (d)
+
+### (e)
+
+```{r}
+resume %$% 
+  lm(call ~ afn_american) %>% 
+  summ()
+```
+
+### (f)
+
+### (g)
+
+```{r}
+resume %$% 
+  lm(call ~ afn_american + 
+       education + years_exp + honors + volunteer + computer_skills + female) %>% 
+  summ()
+```
+
+### (h)
+
+```{r}
+resume %$% 
+  lm(call ~ afn_american * h_quality + 
+       education + years_exp + honors + volunteer + computer_skills + female) %>% 
+  summ()
+```
+
