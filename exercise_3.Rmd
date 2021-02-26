@@ -1,7 +1,7 @@
 ---
 title: "Exercise 3"
 author: "Carilli"
-date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+date: '`r format(lubridate::today(), "%B %d, %Y")`'
 output: 
   html_document:
     theme: cerulean
@@ -12,18 +12,13 @@ output:
 knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, message = FALSE,
                       options(digits = 3, scipen = 999))
 library(tidyverse)
-library(janitor)
-library(jtools)
-library(magrittr)
-library(plm)
-library(broom)
-library(kableExtra)
-library(AER)
 ```
 
-```{r}
-resume <- read_csv("resume_HW.csv") %>% 
-  clean_names() %>% 
+```{r 3data}
+resume <- 
+  here::here("data", "resume_HW.csv") %>% 
+  read_csv() %>% 
+  janitor::clean_names() %>% 
   rename(years_exp = yearsexp,
          computer_skills = computerskills)
 ```
@@ -32,13 +27,14 @@ resume <- read_csv("resume_HW.csv") %>%
 
 ### (b)
 
-```{r}
-varlist <- c("education", "years_exp", "honors", "volunteer", "computer_skills", "female")
-
-lapply(varlist, function(x){
-  lm(substitute(i ~ afn_american, list(i= as.name(x))), data = resume) %>% 
-    tidy()
-})
+```{r 3b}
+resume %>% 
+  lm(cbind(education, years_exp, honors, 
+           volunteer, computer_skills, female) ~ afn_american,
+     .) %>% 
+  broom::tidy() %>% 
+  filter(term == "afn_american") %>% 
+  select(response, statistic, p.value) 
 ```
 
 ### (c)
@@ -47,29 +43,31 @@ lapply(varlist, function(x){
 
 ### (e)
 
-```{r}
-resume %$% 
-  lm(call ~ afn_american) %>% 
-  summ()
+```{r 3e}
+resume %>% 
+  lm(call ~ afn_american, .) %>% 
+  jtools::summ()
 ```
 
 ### (f)
 
 ### (g)
 
-```{r}
-resume %$% 
+```{r 3g}
+resume %>% 
   lm(call ~ afn_american + 
-       education + years_exp + honors + volunteer + computer_skills + female) %>% 
-  summ()
+       education + years_exp + honors + volunteer + computer_skills + female,
+     data = .) %>% 
+  jtools::summ()
 ```
 
 ### (h)
 
-```{r}
-resume %$% 
+```{r 3h}
+resume %>% 
   lm(call ~ afn_american * h_quality + 
-       education + years_exp + honors + volunteer + computer_skills + female) %>% 
-  summ()
+       education + years_exp + honors + volunteer + computer_skills + female,
+     data = .) %>% 
+  jtools::summ()
 ```
 

@@ -1,74 +1,70 @@
 ---
 title: "Exercise 2"
 author: "Carilli"
-date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+date: '`r format(lubridate::today(), "%B %d, %Y")`'
 output: 
   html_document:
     theme: cerulean
     highlight: tango
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, message = FALSE,
                       options(digits = 3, scipen = 999))
 library(tidyverse)
-library(janitor)
-library(jtools)
-library(magrittr)
-library(plm)
-library(broom)
-library(kableExtra)
-library(AER)
 ```
 
-```{r}
-news <- read_csv("news.csv") %>% 
-  clean_names() 
+```{r 2data}
+news <- 
+  here::here("data", "news.csv") %>% 
+  read_csv() %>% 
+  janitor::clean_names() 
 ```
 
 ### (a)
 
-```{r}
-varlist <- c("read_news", "political_interest", "education", "income", "female")
-
-lapply(varlist, function(x){
-  lm(substitute(i ~ treatment_group, list(i= as.name(x))), data = news) %>% 
-    tidy()
-})
+```{r 2a}
+news %>% 
+  lm(cbind(read_news, political_interest, 
+           education, income, female) ~ treatment_group,
+     .) %>% 
+  broom::tidy() %>% 
+  filter(term == "treatment_group") %>% 
+  select(response, statistic, p.value) 
 ```
 
 ### (b)
 
-```{r}
-news %$% 
-  lm(watch_program ~ treatment_group) %>% 
-  summ(digits = 3)
+```{r 2b}
+news %>% 
+  lm(watch_program ~ treatment_group, .) %>% 
+  jtools::summ(digits = 3)
 
-news %$% 
-  lm(watch_program ~ treatment_group) %>% 
-  tidy() %>% 
+news %>% 
+  lm(watch_program ~ treatment_group, .) %>% 
+  broom::tidy() %>% 
   pull(estimate) %>% 
   sum()
 
 news %>% 
   group_by(treatment_group) %>% 
-  summarize("Percent Who Watched the Program" = mean(watch_program)) %>% 
+  summarize("Percent Who Watched the Program" = 
+              mean(watch_program)) %>% 
   filter(treatment_group == 1) %>% 
-  rename("Assigned to Watch" = treatment_group) %>% 
-  kable() %>% 
-  kable_styling(bootstrap_options = c("striped", "hover"), 
-                full_width = FALSE,
-                position = "left")
+  rename("Assigned to Watch" = treatment_group)
 ```
 
 ### (c)
 
-```{r}
-lapply(varlist, function(x){
-  lm(substitute(i ~ watch_program, list(i= as.name(x))), 
-     data = news[news$treatment_group == 1, ]) %>% 
-    tidy()
-})
+```{r 2c}
+news %>%
+  filter(treatment_group == 1) %>%
+  lm(cbind(read_news, political_interest, education, income, female) ~ watch_program,
+     .) %>%
+  broom::tidy() %>%
+  filter(term == "watch_program") %>%
+  select(response, statistic, p.value) 
 ```
 
 
@@ -78,27 +74,28 @@ lapply(varlist, function(x){
 
 ### (f)
 
-```{r}
-news %$% 
-  lm(information_level ~ treatment_group + political_interest + read_news + education) %>% 
-  tidy() %>% 
+```{r 2f}
+news %>% 
+  lm(information_level ~ treatment_group + political_interest + read_news + education, 
+     .) %>% 
+  broom::tidy() %>% 
   filter(term == "treatment_group") %>% 
   pull(estimate) /
 
 news %>% 
   filter(!is.na(information_level)) %$% 
-  lm(watch_program ~ treatment_group + political_interest + read_news + education) %>% 
-  tidy() %>% 
+  lm(watch_program ~ treatment_group + political_interest + read_news + education,
+     .) %>% 
+  broom::tidy() %>% 
   filter(term == "treatment_group") %>% 
   pull(estimate)
 
-news %$% 
-  ivreg(information_level ~ watch_program + political_interest + read_news + education |
-          treatment_group + political_interest + read_news + education) %>% 
-  tidy() %>% 
-  kable() %>% 
-  kable_styling(bootstrap_options = c("striped", "hover"), 
-                full_width = FALSE,
-                position = "left")
+news %>% 
+  AER::ivreg(information_level ~ watch_program + 
+               political_interest + read_news + education |
+               treatment_group + 
+               political_interest + read_news + education,
+             data = .) %>% 
+  broom::tidy() 
 ```
 

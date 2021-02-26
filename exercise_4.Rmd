@@ -1,30 +1,26 @@
 ---
 title: "Exercise 4"
 author: "Carilli"
-date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+date: '`r format(lubridate::today(), "%B %d, %Y")`'
 output: 
   html_document:
     theme: cerulean
     highlight: tango
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, message = FALSE,
+knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, 
+                      message = FALSE,
                       options(digits = 3, scipen = 999))
 library(tidyverse)
-library(janitor)
-library(jtools)
-library(magrittr)
-library(plm)
-library(broom)
-library(kableExtra)
-library(AER)
-library(clubSandwich)
 ```
 
-```{r}
-schools <- read_csv("schools_experiment_HW.csv") %>% 
-  clean_names() %>% 
+```{r 4data}
+schools <- 
+  here::here("data", "schools_experiment_HW.csv") %>% 
+  read_csv() %>% 
+  janitor::clean_names() %>% 
   rename(cluster_code = clustercode,
          test_scores = testscores)
 ```
@@ -35,82 +31,87 @@ schools <- read_csv("schools_experiment_HW.csv") %>%
 
 ### (c)
 
-```{r}
-varlist <- c("age", "girl", "sheep", "duration_village", "farmer", "education_head",
-             "number_ppl_hh", "distance_nearest_school")
-lapply(varlist, function(x){
-  lm(substitute(i ~ treatment, list(i= as.name(x))), data = schools) %>% 
-    tidy()
-})
+```{r 4c}
+schools %>% 
+  lm(cbind(age, girl, sheep, duration_village, farmer, 
+           education_head, number_ppl_hh, distance_nearest_school) ~ 
+       treatment, .) %>% 
+  broom::tidy() %>% 
+  filter(term == "treatment") %>% 
+  select(response, statistic, p.value) 
 ```
 
 
 ### (d)
 
-```{r}
-lapply(varlist, function(x){
-  lm(substitute(i ~ treatment, list(i= as.name(x))), data = schools) %>% 
-    coef_test(vcov = "CR1", cluster = schools$cluster_code) 
-})
-
-# schools %$% 
-#   lm(age ~ treatment) %>% 
-#   coef_test(vcov = "CR1", cluster = cluster_code)
+```{r 4d}
+schools %>% 
+  lm(cbind(age, girl, sheep, duration_village, farmer, education_head, 
+           number_ppl_hh, distance_nearest_school) ~ treatment, .) %>% 
+    clubSandwich::coef_test(vcov = "CR1", cluster = schools$cluster_code) %>% 
+  rownames_to_column("coef") %>% 
+  as_tibble() %>% 
+  filter(str_detect(coef, "treatment"))
 ```
 
 ### (e)
 
-```{r}
-schools %$% 
-  lm(formal_school ~ treatment) %>% 
-  summ(digits = 4)
+```{r 4e}
+schools %>% 
+  lm(formal_school ~ treatment, .) %>% 
+  jtools::summ(digits = 4)
+
+schools %>% 
+  lm(formal_school ~ treatment, .) %>% 
+  broom::augment() %>% 
+  distinct(.fitted)
 
 # clustered errors
 
-schools %$% 
-  lm(formal_school ~ treatment) %>% 
-  coef_test(vcov = "CR1", cluster = schools$cluster_code)
+schools %>% 
+  lm(formal_school ~ treatment, .) %>% 
+  clubSandwich::coef_test(vcov = "CR1", cluster = schools$cluster_code) 
 
 ```
 
 
 ### (f)
 
-```{r}
-schools %$% 
+```{r 4f}
+schools %>% 
   lm(formal_school ~ treatment + age + girl + sheep + duration_village + 
-       farmer + education_head + number_ppl_hh + distance_nearest_school) %>% 
-  summ(digits = 4)
+       farmer + education_head + number_ppl_hh + distance_nearest_school, .) %>% 
+  jtools::summ(digits = 4)
 
 # clustered errors
 
-schools %$% 
+schools %>% 
   lm(formal_school ~ treatment + age + girl + sheep + duration_village + 
-       farmer + education_head + number_ppl_hh + distance_nearest_school) %>%
-  coef_test(vcov = "CR1", cluster = schools$cluster_code)
+       farmer + education_head + number_ppl_hh + distance_nearest_school, .) %>%
+  clubSandwich::coef_test(vcov = "CR1", cluster = schools$cluster_code)
 
 ```
 
 ### (g)
 
-```{r}
-schools %$% 
-  lm(test_scores ~ treatment) %>% 
-  coef_test(vcov = "CR1", cluster = schools$cluster_code)
+```{r 4g}
+schools %>% 
+  lm(test_scores ~ treatment, .) %>% 
+  clubSandwich::coef_test(vcov = "CR1", cluster = schools$cluster_code)
 ```
 
 ### (h)
 
-```{r}
+```{r 4h}
 schools %$% 
   lm(test_scores ~ treatment + age + girl + sheep + duration_village + 
-       farmer + education_head + number_ppl_hh + distance_nearest_school) %>%
-  coef_test(vcov = "CR1", cluster = schools$cluster_code)
+       farmer + education_head + number_ppl_hh + distance_nearest_school, .) %>%
+  clubSandwich::coef_test(vcov = "CR1", cluster = schools$cluster_code)
 ```
 
 ### (i)
 
-```{r}
+```{r 4i}
 sum(!is.na(schools$formal_school))
 sum(!is.na(schools$test_scores))
 
@@ -121,9 +122,9 @@ schools %>%
 
 ### (j)
 
-```{r}
-schools %$%  
-  lm(f07_test_observed ~ treatment) %>% 
-  coef_test(vcov = "CR1", cluster = schools$cluster_code)
+```{r 4j}
+schools %>%  
+  lm(f07_test_observed ~ treatment, .) %>% 
+  clubSandwich::coef_test(vcov = "CR1", cluster = schools$cluster_code)
 ```
 

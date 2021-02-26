@@ -1,0 +1,381 @@
+---
+title: "Chapter 10 Homework"
+author: "Carilli"
+date: '`r format(lubridate::today(), "%B %d, %Y")`'
+output: 
+  html_document:
+    toc: false
+    toc_float: false
+    df_print: paged
+    theme: cerulean
+    highlight: tango
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA, 
+                      warning = FALSE, message = FALSE, 
+                      options(digits = 3, scipen = 999))
+library(tidyverse)
+```
+
+# Exercises {.tabset}
+
+## Exercise 1 {.tabset}
+
+```{r 1data}
+vote <- 
+  here::here("data", "GerberGreenData.csv") %>% 
+  read_csv() %>% 
+  janitor::clean_names()
+```
+
+### (a)
+
+```{r 1a}
+vote %>% 
+  lm(voted ~ contact_observed, .) %>% 
+  jtools::summ(digits = 3)
+```
+
+
+### (b)
+
+```{r 1b}
+vote %>% 
+  lm(contact_observed ~ contact_assigned, .) %>% 
+  jtools::summ(digits = 3) 
+
+
+vote %>% 
+  group_by(contact_assigned) %>% 
+  summarize("Percent Observed" = mean(contact_observed, na.rm = TRUE)) %>% 
+  filter(contact_assigned == 1)
+
+  
+```
+
+### (c)
+
+```{r 1c}
+vote %>% 
+  lm(voted ~ contact_assigned, .) %>% 
+  jtools::summ(digits = 3)
+```
+
+### (d)
+
+```{r 1d}
+vote %>% 
+  AER::ivreg(voted ~ contact_observed | contact_assigned, data = .) %>% 
+  broom::tidy() 
+  
+```
+
+### (e)
+
+```{r 1e}
+vote %>% 
+  lm(voted ~ contact_assigned, .) %>%
+  broom::tidy() %>% 
+  filter(term == "contact_assigned") %>% 
+  pull(estimate) /
+
+vote %>% 
+  lm(contact_observed ~ contact_assigned, .) %>% 
+  broom::tidy() %>% 
+  filter(term == "contact_assigned") %>% 
+  pull(estimate)
+
+```
+
+### (f)
+
+```{r 1f}
+vote %>% 
+  mutate(ward_2 = ward == 2) %>% 
+  lm(ward_2 ~ contact_assigned, .) %>% 
+  jtools::summ(digits = 4) 
+
+vote %>% 
+  mutate(ward_3 = ward == 3) %>% 
+  lm(ward_3 ~ contact_assigned, .) %>% 
+  jtools::summ(digits = 4) 
+  
+vote %>% 
+  lm(people_hh ~ contact_assigned, .) %>% 
+  jtools::summ(digits = 4)
+```
+
+### (g)
+
+```{r 1g}
+vote %>% 
+  mutate(ward_2 = ward == 2,
+         ward_3 = ward == 3) %$% 
+  AER::ivreg(voted ~ contact_observed + people_hh + ward_2 + ward_3 | 
+          contact_assigned + people_hh + ward_2 + ward_3) %>% 
+  broom::tidy() 
+```
+
+
+## Exercise 2 {.tabset}
+```{r 2data}
+news <- 
+  here::here("data", "news.csv") %>% 
+  read_csv() %>% 
+  janitor::clean_names() 
+```
+
+### (a)
+
+```{r 2a}
+news %>% 
+  lm(cbind(read_news, political_interest, education, income, female) ~ treatment_group,
+     .) %>% 
+  broom::tidy() %>% 
+  filter(term == "treatment_group") %>% 
+  select(response, statistic, p.value) 
+```
+
+### (b)
+
+```{r 2b}
+news %>% 
+  lm(watch_program ~ treatment_group, .) %>% 
+  jtools::summ(digits = 3)
+
+news %>% 
+  lm(watch_program ~ treatment_group, .) %>% 
+  broom::tidy() %>% 
+  pull(estimate) %>% 
+  sum()
+
+news %>% 
+  group_by(treatment_group) %>% 
+  summarize("Percent Who Watched the Program" = mean(watch_program)) %>% 
+  filter(treatment_group == 1) %>% 
+  rename("Assigned to Watch" = treatment_group)
+```
+
+### (c)
+
+```{r 2c}
+news %>% 
+  filter(treatment_group == 1) %>% 
+  lm(cbind(read_news, political_interest, education, income, female) ~ watch_program,
+     .) %>% 
+  broom::tidy() %>% 
+  filter(term == "watch_program") %>% 
+  select(response, statistic, p.value) 
+```
+
+
+### (d)
+
+### (e)
+
+### (f)
+
+```{r 2f}
+news %>% 
+  lm(information_level ~ treatment_group + political_interest + read_news + education, 
+     .) %>% 
+  broom::tidy() %>% 
+  filter(term == "treatment_group") %>% 
+  pull(estimate) /
+
+news %>% 
+  filter(!is.na(information_level)) %$% 
+  lm(watch_program ~ treatment_group + political_interest + read_news + education,
+     .) %>% 
+  broom::tidy() %>% 
+  filter(term == "treatment_group") %>% 
+  pull(estimate)
+
+news %>% 
+  AER::ivreg(information_level ~ watch_program + 
+               political_interest + read_news + education |
+               treatment_group + 
+               political_interest + read_news + education,
+             data = .) %>% 
+  broom::tidy() 
+```
+
+## Exercise 3 {.tabset}
+```{r 3data}
+resume <- 
+  here::here("data", "resume_HW.csv") %>% 
+  read_csv() %>% 
+  janitor::clean_names() %>% 
+  rename(years_exp = yearsexp,
+         computer_skills = computerskills)
+```
+
+### (a)
+
+### (b)
+
+```{r 3b}
+resume %>% 
+  lm(cbind(education, years_exp, honors, 
+           volunteer, computer_skills, female) ~ afn_american,
+     .) %>% 
+  broom::tidy() %>% 
+  filter(term == "afn_american") %>% 
+  select(response, statistic, p.value) 
+```
+
+### (c)
+
+### (d)
+
+### (e)
+
+```{r 3e}
+resume %>% 
+  lm(call ~ afn_american, .) %>% 
+  jtools::summ()
+```
+
+### (f)
+
+### (g)
+
+```{r 3g}
+resume %>% 
+  lm(call ~ afn_american + 
+       education + years_exp + honors + volunteer + computer_skills + female,
+     data = .) %>% 
+  jtools::summ()
+```
+
+### (h)
+
+```{r 3h}
+resume %>% 
+  lm(call ~ afn_american * h_quality + 
+       education + years_exp + honors + volunteer + computer_skills + female,
+     data = .) %>% 
+  jtools::summ()
+```
+
+
+## Exercise 4 {.tabset}
+
+```{r 4data}
+schools <- 
+  here::here("data", "schools_experiment_HW.csv") %>% 
+  read_csv() %>% 
+  janitor::clean_names() %>% 
+  rename(cluster_code = clustercode,
+         test_scores = testscores)
+```
+
+### (a)
+
+### (b)
+
+### (c)
+
+```{r 4c}
+schools %>% 
+  lm(cbind(age, girl, sheep, duration_village, farmer, 
+           education_head, number_ppl_hh, distance_nearest_school) ~ 
+       treatment, .) %>% 
+  broom::tidy() %>% 
+  filter(term == "treatment") %>% 
+  select(response, statistic, p.value) 
+```
+
+
+### (d)
+
+```{r 4d}
+schools %>% 
+  lm(cbind(age, girl, sheep, duration_village, farmer, education_head, 
+           number_ppl_hh, distance_nearest_school) ~ treatment, .) %>% 
+    clubSandwich::coef_test(vcov = "CR1", cluster = schools$cluster_code) %>% 
+  rownames_to_column("coef") %>% 
+  as_tibble() %>% 
+  filter(str_detect(coef, "treatment"))
+```
+
+### (e)
+
+```{r 4e}
+schools %>% 
+  lm(formal_school ~ treatment, .) %>% 
+  jtools::summ(digits = 4)
+
+# clustered errors
+
+schools %>% 
+  lm(formal_school ~ treatment, .) %>% 
+  clubSandwich::coef_test(vcov = "CR1", cluster = schools$cluster_code) %>% 
+  rownames_to_column("coef") %>% 
+  as_tibble() %>% 
+  filter(str_detect(coef, "treatment"))
+
+```
+
+
+### (f)
+
+```{r 4f}
+schools %>% 
+  lm(formal_school ~ treatment + age + girl + sheep + duration_village + 
+       farmer + education_head + number_ppl_hh + distance_nearest_school, .) %>% 
+  jtools::summ(digits = 4)
+
+# clustered errors
+
+schools %>% 
+  lm(formal_school ~ treatment + age + girl + sheep + duration_village + 
+       farmer + education_head + number_ppl_hh + distance_nearest_school, .) %>%
+  clubSandwich::coef_test(vcov = "CR1", cluster = schools$cluster_code) 
+
+```
+
+### (g)
+
+```{r 4g}
+schools %>% 
+  lm(test_scores ~ treatment, .) %>% 
+  clubSandwich::coef_test(vcov = "CR1", cluster = schools$cluster_code) %>% 
+  rownames_to_column("coef") %>% 
+  as_tibble() %>% 
+  filter(str_detect(coef, "treatment"))
+```
+
+### (h)
+
+```{r 4h}
+schools %$% 
+  lm(test_scores ~ treatment + age + girl + sheep + duration_village + 
+       farmer + education_head + number_ppl_hh + distance_nearest_school, .) %>%
+  clubSandwich::coef_test(vcov = "CR1", cluster = schools$cluster_code)
+```
+
+### (i)
+
+```{r 4i}
+sum(!is.na(schools$formal_school))
+sum(!is.na(schools$test_scores))
+
+schools %>% 
+  select(formal_school, test_scores) %>% 
+  psych::describe()
+```
+
+### (j)
+
+```{r 4j}
+schools %>%  
+  lm(f07_test_observed ~ treatment, .) %>% 
+  clubSandwich::coef_test(vcov = "CR1", cluster = schools$cluster_code)%>% 
+  rownames_to_column("coef") %>% 
+  as_tibble() %>% 
+  filter(str_detect(coef, "treatment"))
+```
+
