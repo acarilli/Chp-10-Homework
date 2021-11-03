@@ -38,7 +38,7 @@ schools %>%
        treatment, .) %>% 
   broom::tidy() %>% 
   filter(term == "treatment") %>% 
-  select(response, statistic, p.value) 
+  select(response, estimate, statistic, p.value) 
 ```
 
 
